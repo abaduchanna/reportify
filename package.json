@@ -1,0 +1,65 @@
+{
+  "name": "reportify-punch-tracker",
+  "version": "1.0.0",
+  "description": "Enterprise punch tracking system by Reportify Solutions",
+  "main": "main.js",
+  "homepage": "./",
+  "author": "Reportify Solutions",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && electron .\"",
+    "build": "npm run build-win",
+    "build-win": "electron-builder --win --publish never",
+    "build-all": "electron-builder -mwl --publish never",
+    "pack": "electron-builder --dir",
+    "prestart": "npm run build-assets"
+  },
+  "dependencies": {
+    "firebase": "^10.12.2"
+  },
+  "devDependencies": {
+    "electron": "^latest",
+    "electron-is-dev": "^2.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-notarize": "^1.2.2"
+  },
+  "build": {
+    "appId": "com.reportify.punch-tracker",
+    "productName": "Reportify Punch Tracker",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "assets/**",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Reportify Punch Tracker"
+    },
+    "portable": {
+      "artifactName": "Reportify-Punch-Tracker-${version}.exe"
+    }
+  }
+}

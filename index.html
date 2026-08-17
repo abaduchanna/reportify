@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#c8102e">
+  <title>Reportify Punch Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] {
+      --bg: #FFFBF1;
+      --bg2: #FFFCF8;
+      --card: #FFFCF8;
+      --hover: #F5EFE6;
+      --border: #E8E0D5;
+      --accent: #c8102e;
+      --accent-h: #a00c24;
+      --accent-soft: rgba(200, 16, 46, 0.08);
+      --text: #1a1a1a;
+      --t2: #666666;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --shadow: 0 6px 20px rgba(0,0,0,0.04);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0a0a0b;
+      --bg2: #111112;
+      --card: #18181b;
+      --hover: #27272a;
+      --border: #3f3f46;
+      --accent: #c8102e;
+      --accent-h: #e11d48;
+      --accent-soft: rgba(200, 16, 46, 0.15);
+      --text: #f9fafb;
+      --t2: #a1a1aa;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .app-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: white;
+      font-size: 18px;
+      box-shadow: 0 4px 10px var(--accent-soft);
+    }
+
+    .logo-text {
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-display {
+      font-size: 14px;
+      color: var(--t2);
+      font-weight: 600;
+      min-width: 120px;
+      text-align: right;
+    }
+
+    .settings-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: var(--t2);
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .theme-toggle {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--t2);
+      font-size: 13px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 40px 32px;
+    }
+
+    .punch-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      box-shadow: var(--shadow);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .user-greeting {
+      font-size: 16px;
+      color: var(--t2);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .current-time {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 16px 0 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .current-date {
+      font-size: 14px;
+      color: var(--t2);
+      margin-bottom: 36px;
+      font-weight: 500;
+    }
+
+    .status-section {
+      margin-bottom: 32px;
+      padding: 20px;
+      background: var(--hover);
+      border-radius: 12px;
+    }
+
+    .status-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--t2);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .status-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .punch-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn-punch {
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-height: 80px;
+      justify-content: center;
+    }
+
+    .btn-clock-in {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%);
+      color: white;
+      box-shadow: 0 4px 12px var(--accent-soft);
+    }
+
+    .btn-clock-in:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(200, 16, 46, 0.3);
+    }
+
+    .btn-clock-out {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    }
+
+    .btn-clock-out:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-break-in {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-break-in:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-break-out {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+    }
+
+    .btn-break-out:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-punch:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-icon {
+      font-size: 24px;
+    }
+
+    .punch-history {
+      background: var(--hover);
+      border-radius: 12px;
+      padding: 16px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+
+    .history-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--t2);
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: var(--card);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .history-item.break {
+      border-left-color: #3b82f6;
+    }
+
+    .history-type {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .history-time {
+      color: var(--t2);
+      font-size: 12px;
+    }
+
+    .footer-status {
+      padding: 12px 16px;
+      background: var(--accent-soft);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--t2);
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--t2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input, .form-select {
+      background: var(--inp-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px var(--accent-soft);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(200, 16, 46, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--t2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      background: var(--ok);
+      color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      font-size: 13px;
+      font-weight: 600;
+      animation: slideIn 0.3s ease;
+      z-index: 2000;
+      max-width: 400px;
+    }
+
+    .notification.error {
+      background: var(--err);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .punch-container {
+        padding: 32px 20px;
+      }
+
+      .punch-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .header-right {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="logo-section">
+        <div class="logo-icon">R</div>
+        <div class="logo-text">REPORTIFY</div>
+      </div>
+      <div class="header-right">
+        <div class="time-display" id="timeDisplay">00:00:00</div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+        <button class="settings-btn" id="settingsBtn">⚙️ Settings</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="punch-container">
+        <div class="user-greeting">Welcome Back,</div>
+        <div class="current-time" id="currentTime">00:00:00</div>
+        <div class="current-date" id="currentDate">--</div>
+
+        <div class="status-section">
+          <div class="status-label">Current Status</div>
+          <div class="status-value" id="currentStatus">Clocked Out</div>
+        </div>
+
+        <div class="punch-buttons">
+          <button class="btn-punch btn-clock-in" id="clockInBtn">
+            <span class="btn-icon">📍</span>
+            <span>Clock In</span>
+          </button>
+          <button class="btn-punch btn-clock-out" id="clockOutBtn">
+            <span class="btn-icon">🚪</span>
+            <span>Clock Out</span>
+          </button>
+          <button class="btn-punch btn-break-in" id="breakInBtn">
+            <span class="btn-icon">☕</span>
+            <span>Break In</span>
+          </button>
+          <button class="btn-punch btn-break-out" id="breakOutBtn">
+            <span class="btn-icon">💼</span>
+            <span>Break Out</span>
+          </button>
+        </div>
+
+        <div class="punch-history">
+          <div class="history-title">Today's Punches</div>
+          <div id="historyContainer">
+            <div style="color: var(--t2); font-size: 12px;">No punches recorded yet</div>
+          </div>
+        </div>
+
+        <div class="footer-status" id="footerStatus">
+          Connected to Firebase ✓
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Admin Settings</div>
+        <button class="modal-close" id="closeSettingsBtn">×</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Employee Name</label>
+        <input type="text" class="form-input" id="employeeName" placeholder="Enter your name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Employee ID</label>
+        <input type="text" class="form-input" id="employeeId" placeholder="Enter your ID">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <input type="text" class="form-input" id="department" placeholder="Enter your department">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Theme</label>
+        <select class="form-select" id="themeSelect">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Firebase Config (JSON)</label>
+        <textarea class="form-input" id="firebaseConfig" style="min-height: 120px; resize: vertical;" placeholder="Paste your Firebase config here"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
+        <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase initialization will be handled here
+    let db;
+    let currentUser = null;
+    let punchHistory = [];
+
+    // Initialize Firebase from settings
+    function initializeFirebase(config) {
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(config);
+        }
+        db = firebase.database();
+        return true;
+      } catch (error) {
+        console.error('Firebase init error:', error);
+        return false;
+      }
+    }
+
+    // Load settings from localStorage
+    function loadSettings() {
+      const settings = JSON.parse(localStorage.getItem('punchSettings') || '{}');
+      if (settings.employeeName) document.getElementById('employeeName').value = settings.employeeName;
+      if (settings.employeeId) document.getElementById('employeeId').value = settings.employeeId;
+      if (settings.department) document.getElementById('department').value = settings.department;
+      if (settings.theme) {
+        document.documentElement.setAttribute('data-theme', settings.theme);
+        document.getElementById('themeSelect').value = settings.theme;
+        updateThemeIcon(settings.theme);
+      }
+      if (settings.firebaseConfig) {
+        document.getElementById('firebaseConfig').value = settings.firebaseConfig;
+        try {
+          const config = JSON.parse(settings.firebaseConfig);
+          initializeFirebase(config);
+          updateStatus('Connected to Firebase ✓', false);
+        } catch (e) {
+          updateStatus('Firebase config invalid', true);
+        }
+      }
+      return settings;
+    }
+
+    // Save settings to localStorage
+    function saveSettings() {
+      const settings = {
+        employeeName: document.getElementById('employeeName').value,
+        employeeId: document.getElementById('employeeId').value,
+        department: document.getElementById('department').value,
+        theme: document.getElementById('themeSelect').value,
+        firebaseConfig: document.getElementById('firebaseConfig').value,
+      };
+      localStorage.setItem('punchSettings', JSON.stringify(settings));
+      
+      const theme = settings.theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      updateThemeIcon(theme);
+      
+      try {
+        const config = JSON.parse(settings.firebaseConfig);
+        initializeFirebase(config);
+        updateStatus('Settings saved & Firebase connected ✓', false);
+        showNotification('Settings saved successfully!');
+      } catch (e) {
+        updateStatus('Firebase config error', true);
+        showNotification('Firebase config is invalid', true);
+      }
+    }
+
+    // Update current time
+    function updateTime() {
+      const now = new Date();
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      document.getElementById('timeDisplay').textContent = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+
+    function updateDate() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+    }
+
+    // Log punch to Firebase and localStorage
+    async function logPunch(type) {
+      const now = new Date();
+      const timestamp = now.toISOString();
+      const settings = JSON.parse(localStorage.getItem('punchSettings') || '{}');
+
+      const punchData = {
+        type: type,
+        timestamp: timestamp,
+        employeeName: settings.employeeName || 'Unknown',
+        employeeId: settings.employeeId || 'N/A',
+        department: settings.department || 'N/A',
+        time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+        date: now.toLocaleDateString('en-US'),
+      };
+
+      // Add to local history
+      punchHistory.push(punchData);
+      updateHistoryDisplay();
+
+      // Send to Firebase
+      if (db && settings.employeeId) {
+        try {
+          const punchRef = `punches/${settings.employeeId}/${timestamp}`;
+          await db.ref(punchRef).set(punchData);
+          showNotification(`${type} recorded successfully!`);
+          updateStatus(`Last punch: ${type} at ${punchData.time}`);
+        } catch (error) {
+          console.error('Firebase error:', error);
+          showNotification(`${type} logged locally (Firebase connection failed)`, true);
+        }
+      } else {
+        showNotification(`${type} logged locally (configure Firebase in settings)`);
+      }
+
+      // Log to Electron
+      if (window.electronAPI) {
+        window.electronAPI.logPunch(punchData);
+      }
+
+      updateStatusDisplay(type);
+    }
+
+    function updateStatusDisplay(lastPunchType) {
+      const statusMap = {
+        'Clock In': 'Clocked In',
+        'Clock Out': 'Clocked Out',
+        'Break In': 'On Break',
+        'Break Out': 'Back to Work',
+      };
+      document.getElementById('currentStatus').textContent = statusMap[lastPunchType] || 'Unknown';
+    }
+
+    function updateHistoryDisplay() {
+      const container = document.getElementById('historyContainer');
+      if (punchHistory.length === 0) {
+        container.innerHTML = '<div style="color: var(--t2); font-size: 12px;">No punches recorded yet</div>';
+        return;
+      }
+
+      container.innerHTML = punchHistory
+        .slice()
+        .reverse()
+        .slice(0, 5)
+        .map(punch => `
+          <div class="history-item ${punch.type.includes('Break') ? 'break' : ''}">
+            <span class="history-type">${punch.type}</span>
+            <span class="history-time">${punch.time}</span>
+          </div>
+        `)
+        .join('');
+    }
+
+    function updateStatus(message, isError = false) {
+      const footer = document.getElementById('footerStatus');
+      footer.textContent = message;
+      if (isError) {
+        footer.style.background = 'rgba(239, 68, 68, 0.15)';
+        footer.style.color = '#ef4444';
+      } else {
+        footer.style.background = 'var(--accent-soft)';
+        footer.style.color = 'var(--accent)';
+      }
+    }
+
+    function showNotification(message, isError = false) {
+      const notification = document.createElement('div');
+      notification.className = `notification ${isError ? 'error' : ''}`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    function updateThemeIcon(theme) {
+      const icon = document.getElementById('themeIcon');
+      icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // Event listeners
+    document.getElementById('clockInBtn').addEventListener('click', () => logPunch('Clock In'));
+    document.getElementById('clockOutBtn').addEventListener('click', () => logPunch('Clock Out'));
+    document.getElementById('breakInBtn').addEventListener('click', () => logPunch('Break In'));
+    document.getElementById('breakOutBtn').addEventListener('click', () => logPunch('Break Out'));
+
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('open');
+    });
+
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.remove('open');
+    });
+
+    document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.remove('open');
+    });
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+      saveSettings();
+      document.getElementById('settingsModal').classList.remove('open');
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      document.getElementById('themeSelect').value = newTheme;
+      updateThemeIcon(newTheme);
+      
+      const settings = JSON.parse(localStorage.getItem('punchSettings') || '{}');
+      settings.theme = newTheme;
+      localStorage.setItem('punchSettings', JSON.stringify(settings));
+    });
+
+    // Close modal on outside click
+    document.getElementById('settingsModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('settingsModal')) {
+        document.getElementById('settingsModal').classList.remove('open');
+      }
+    });
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      updateTime();
+      updateDate();
+      setInterval(updateTime, 1000);
+    });
+  </script>
+</body>
+</html>
