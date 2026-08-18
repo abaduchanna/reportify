@@ -16,7 +16,7 @@ function createWindow() {
       nodeIntegration: false,
       enableRemoteModule: false,
     },
-    icon: path.join(__dirname, 'assets/logo.png'),
+    icon: path.join(__dirname, 'assets/icon.ico'),
     show: false,
   });
 

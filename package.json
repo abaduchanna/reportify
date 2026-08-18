@@ -31,17 +31,10 @@
       "main.js",
       "preload.js",
       "index.html",
-      "assets/**",
       "node_modules/**"
     ],
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
         {
           "target": "portable",
           "arch": [
@@ -49,17 +42,10 @@
           ]
         }
       ],
-      "icon": "assets/logo.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Reportify Punch Tracker"
+      "icon": "assets/icon.ico"
     },
     "portable": {
-      "artifactName": "Reportify-Punch-Tracker-${version}.exe"
+      "artifactName": "Reportify-Punch-Tracker.exe"
     }
   }
 }

@@ -27,6 +27,26 @@ cd /d "%GITHUB_LOCAL%\%REPO_NAME%"
 echo [OK] Changed directory to: %CD%
 echo.
 
+REM Create assets folder
+if not exist "assets" mkdir assets
+echo [OK] Assets folder ready
+
+REM Check if icon exists, if not create it
+if not exist "assets\icon.ico" (
+    echo [BUILD] Creating icon from logo...
+    if exist "create_icon.py" (
+        python create_icon.py
+        if %errorlevel% neq 0 (
+            echo [WARNING] Icon creation failed, will use default
+        )
+    ) else (
+        echo [WARNING] create_icon.py not found, will use default icon
+    )
+) else (
+    echo [OK] Icon file already exists
+)
+echo.
+
 REM Check if Node.js is installed
 echo [CHECK] Verifying Node.js installation...
 where node >nul 2>nul
