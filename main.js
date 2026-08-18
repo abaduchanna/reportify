@@ -1,8 +1,62 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
+
+// Autostart functionality
+function createStartupShortcut() {
+  try {
+    const exePath = app.getPath('exe');
+    const startupFolder = path.join(
+      os.homedir(),
+      'AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup'
+    );
+    const batchPath = path.join(startupFolder, 'Reportify Punch Tracker.bat');
+    
+    const batchContent = `@echo off\nstart "" "${exePath}"\n`;
+    fs.writeFileSync(batchPath, batchContent);
+    console.log('✅ Autostart enabled');
+    return true;
+  } catch (error) {
+    console.error('❌ Autostart failed:', error);
+    return false;
+  }
+}
+
+function removeStartupShortcut() {
+  try {
+    const startupFolder = path.join(
+      os.homedir(),
+      'AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup'
+    );
+    const batchPath = path.join(startupFolder, 'Reportify Punch Tracker.bat');
+    
+    if (fs.existsSync(batchPath)) {
+      fs.unlinkSync(batchPath);
+      console.log('✅ Autostart disabled');
+    }
+    return true;
+  } catch (error) {
+    console.error('❌ Error removing autostart:', error);
+    return false;
+  }
+}
+
+function isAutostartEnabled() {
+  try {
+    const startupFolder = path.join(
+      os.homedir(),
+      'AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup'
+    );
+    const batchPath = path.join(startupFolder, 'Reportify Punch Tracker.bat');
+    return fs.existsSync(batchPath);
+  } catch (error) {
+    return false;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -71,6 +125,19 @@ ipcMain.handle('open-settings', async () => {
     buttons: ['Close'],
   });
   return result;
+});
+
+// Autostart handlers
+ipcMain.handle('enable-autostart', async () => {
+  return createStartupShortcut();
+});
+
+ipcMain.handle('disable-autostart', async () => {
+  return removeStartupShortcut();
+});
+
+ipcMain.handle('check-autostart', async () => {
+  return isAutostartEnabled();
 });
 
 // Create app menu

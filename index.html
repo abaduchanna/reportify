@@ -440,6 +440,11 @@
       transition: all 0.2s ease;
     }
 
+    input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
     .form-input:focus, .form-select:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 4px var(--accent-soft);
@@ -634,6 +639,16 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">
+          <input type="checkbox" id="autostartToggle" style="margin-right: 8px;">
+          Auto-start with Windows
+        </label>
+        <div style="font-size: 11px; color: var(--t2); margin-top: 4px;">
+          Automatically launch Reportify when Windows starts
+        </div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Firebase Config (JSON)</label>
         <textarea class="form-input" id="firebaseConfig" style="min-height: 120px; resize: vertical;" placeholder="Paste your Firebase config here"></textarea>
       </div>
@@ -676,6 +691,16 @@
         document.getElementById('themeSelect').value = settings.theme;
         updateThemeIcon(settings.theme);
       }
+      if (settings.autostart !== undefined) {
+        document.getElementById('autostartToggle').checked = settings.autostart;
+      } else {
+        // Check actual autostart status from system
+        if (window.electronAPI) {
+          window.electronAPI.checkAutostart().then(enabled => {
+            document.getElementById('autostartToggle').checked = enabled;
+          });
+        }
+      }
       if (settings.firebaseConfig) {
         document.getElementById('firebaseConfig').value = settings.firebaseConfig;
         try {
@@ -696,6 +721,7 @@
         employeeId: document.getElementById('employeeId').value,
         department: document.getElementById('department').value,
         theme: document.getElementById('themeSelect').value,
+        autostart: document.getElementById('autostartToggle').checked,
         firebaseConfig: document.getElementById('firebaseConfig').value,
       };
       localStorage.setItem('punchSettings', JSON.stringify(settings));
@@ -703,6 +729,25 @@
       const theme = settings.theme;
       document.documentElement.setAttribute('data-theme', theme);
       updateThemeIcon(theme);
+      
+      // Handle autostart
+      if (window.electronAPI) {
+        if (settings.autostart) {
+          window.electronAPI.enableAutostart().then(success => {
+            if (success) {
+              showNotification('✅ Auto-start enabled');
+            } else {
+              showNotification('⚠️ Could not enable auto-start', true);
+            }
+          });
+        } else {
+          window.electronAPI.disableAutostart().then(success => {
+            if (success) {
+              showNotification('✅ Auto-start disabled');
+            }
+          });
+        }
+      }
       
       try {
         const config = JSON.parse(settings.firebaseConfig);
