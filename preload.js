@@ -5,4 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logPunch: (punchData) => ipcRenderer.invoke('log-punch', punchData),
   openSettings: () => ipcRenderer.invoke('open-settings'),
   onPunchLogged: (callback) => ipcRenderer.on('punch-logged', callback),
+  enableAutostart: () => ipcRenderer.invoke('enable-autostart'),
+  disableAutostart: () => ipcRenderer.invoke('disable-autostart'),
+  checkAutostart: () => ipcRenderer.invoke('check-autostart'),
 });
