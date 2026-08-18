@@ -45,3 +45,7 @@ dist/
 node_modules/
 *.log
 .DS_Store
+.cache/
+.npm/
+.nvm/
+.cargo/
