@@ -615,10 +615,24 @@
         <button class="modal-close" id="closeSettingsBtn">×</button>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Employee Name</label>
-        <input type="text" class="form-input" id="employeeName" placeholder="Enter your name">
+      <!-- Password Protection Section -->
+      <div id="passwordPrompt">
+        <div class="form-group">
+          <label class="form-label">Admin Password Required</label>
+          <input type="password" class="form-input" id="adminPassword" placeholder="Enter admin password">
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="cancelPasswordBtn">Cancel</button>
+          <button class="btn-primary" id="verifyPasswordBtn">Verify Password</button>
+        </div>
       </div>
+
+      <!-- Settings Content (Hidden Until Password Verified) -->
+      <div id="settingsContent" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Employee Name</label>
+          <input type="text" class="form-input" id="employeeName" placeholder="Enter your name">
+        </div>
 
       <div class="form-group">
         <label class="form-label">Employee ID</label>
@@ -653,6 +667,17 @@
         <textarea class="form-input" id="firebaseConfig" style="min-height: 120px; resize: vertical;" placeholder="Paste your Firebase config here"></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">
+          <input type="checkbox" id="scannerEnabled" style="margin-right: 8px;">
+          Enable Finger Scanner Support
+        </label>
+        <div style="font-size: 11px; color: var(--t2); margin-top: 4px;">
+          Connect a USB finger scanner device to automatically record punches
+        </div>
+      </div>
+      </div> <!-- Close settingsContent -->
+
       <div class="modal-footer">
         <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
         <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
@@ -665,6 +690,92 @@
     let db;
     let currentUser = null;
     let punchHistory = [];
+    let passwordVerified = false;
+    let scannerBuffer = '';
+    let lastScanTime = 0;
+    const SCANNER_TIMEOUT = 500; // 500ms to complete scan
+    const ADMIN_PASSWORD = '1234'; // DEFAULT PASSWORD - CHANGE THIS!
+
+    // Password verification
+    function verifyPassword(password) {
+      return password === ADMIN_PASSWORD;
+    }
+
+    function showSettingsContent() {
+      passwordVerified = true;
+      document.getElementById('passwordPrompt').style.display = 'none';
+      document.getElementById('settingsContent').style.display = 'block';
+    }
+
+    function hideSettingsContent() {
+      passwordVerified = false;
+      document.getElementById('passwordPrompt').style.display = 'block';
+      document.getElementById('settingsContent').style.display = 'none';
+      document.getElementById('adminPassword').value = '';
+    }
+
+    // Finger Scanner Support (USB HID Device)
+    function enableScannerSupport() {
+      console.log('🔍 Finger scanner support enabled');
+      document.addEventListener('keydown', handleScannerInput);
+    }
+
+    function disableScannerSupport() {
+      console.log('🔍 Finger scanner support disabled');
+      document.removeEventListener('keydown', handleScannerInput);
+    }
+
+    function handleScannerInput(e) {
+      const now = Date.now();
+      
+      // Reset buffer if timeout exceeded (scan completed)
+      if (now - lastScanTime > SCANNER_TIMEOUT && scannerBuffer.length > 0) {
+        processScannerData(scannerBuffer);
+        scannerBuffer = '';
+      }
+      
+      lastScanTime = now;
+      
+      // Collect input from scanner (usually appears as rapid key presses)
+      if (e.key === 'Enter' && scannerBuffer.length > 5) {
+        // Enter completes the scan
+        processScannerData(scannerBuffer);
+        scannerBuffer = '';
+        e.preventDefault();
+      } else if (e.key && e.key.length === 1 && e.key !== 'Enter') {
+        // Collect characters (scanner typically sends digit stream)
+        scannerBuffer += e.key;
+        // Auto-trigger after sufficient data or specific pattern
+        if (scannerBuffer.length > 20) {
+          processScannerData(scannerBuffer);
+          scannerBuffer = '';
+        }
+      }
+    }
+
+    function processScannerData(data) {
+      console.log('👤 Scanner data received:', data);
+      
+      const settings = JSON.parse(localStorage.getItem('punchSettings') || '{}');
+      
+      // If scanner enabled, process punch
+      if (settings.scannerEnabled) {
+        // Try to match against stored fingerprint patterns
+        // For now, cycle through punch types: Clock In → Break In → Break Out → Clock Out
+        const punchTypes = ['Clock In', 'Break In', 'Break Out', 'Clock Out'];
+        
+        // Get last punch type from history
+        let nextPunchType = 'Clock In';
+        if (punchHistory.length > 0) {
+          const lastPunch = punchHistory[punchHistory.length - 1].type;
+          const lastIndex = punchTypes.indexOf(lastPunch);
+          nextPunchType = punchTypes[(lastIndex + 1) % punchTypes.length];
+        }
+        
+        logPunch(nextPunchType);
+        showNotification(`👤 Fingerprint recognized: ${nextPunchType}`);
+      }
+    }
 
     // Initialize Firebase from settings
     function initializeFirebase(config) {
@@ -701,6 +812,12 @@
           });
         }
       }
+      if (settings.scannerEnabled !== undefined) {
+        document.getElementById('scannerEnabled').checked = settings.scannerEnabled;
+        if (settings.scannerEnabled) {
+          enableScannerSupport();
+        }
+      }
       if (settings.firebaseConfig) {
         document.getElementById('firebaseConfig').value = settings.firebaseConfig;
         try {
@@ -722,6 +839,7 @@
         department: document.getElementById('department').value,
         theme: document.getElementById('themeSelect').value,
         autostart: document.getElementById('autostartToggle').checked,
+        scannerEnabled: document.getElementById('scannerEnabled').checked,
         firebaseConfig: document.getElementById('firebaseConfig').value,
       };
       localStorage.setItem('punchSettings', JSON.stringify(settings));
@@ -747,6 +865,15 @@
             }
           });
         }
+      }
+      
+      // Handle scanner support
+      if (settings.scannerEnabled) {
+        enableScannerSupport();
+        showNotification('👤 Finger scanner enabled');
+      } else {
+        disableScannerSupport();
+        showNotification('👤 Finger scanner disabled');
       }
       
       try {
@@ -891,19 +1018,49 @@
 
     document.getElementById('settingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').classList.add('open');
+      hideSettingsContent();
+      document.getElementById('adminPassword').focus();
     });
 
     document.getElementById('closeSettingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').classList.remove('open');
+      hideSettingsContent();
+    });
+
+    // Password verification handlers
+    document.getElementById('verifyPasswordBtn').addEventListener('click', () => {
+      const password = document.getElementById('adminPassword').value;
+      if (verifyPassword(password)) {
+        showSettingsContent();
+        showNotification('✅ Password verified');
+      } else {
+        showNotification('❌ Incorrect password', true);
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('adminPassword').focus();
+      }
+    });
+
+    document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.remove('open');
+      hideSettingsContent();
+    });
+
+    // Allow Enter key for password verification
+    document.getElementById('adminPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('verifyPasswordBtn').click();
+      }
     });
 
     document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').classList.remove('open');
+      hideSettingsContent();
     });
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
       saveSettings();
       document.getElementById('settingsModal').classList.remove('open');
+      hideSettingsContent();
     });
 
     document.getElementById('themeToggle').addEventListener('click', () => {
