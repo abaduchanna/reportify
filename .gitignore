@@ -36,3 +36,12 @@ Thumbs.db
 *.pdb
 .cache/
 temp/
+-e 
+# System folders
+.npm-global/
+.local/
+.config/
+dist/
+node_modules/
+*.log
+.DS_Store
